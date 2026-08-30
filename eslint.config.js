@@ -70,7 +70,14 @@ export default tseslint.config([
   {
     files: ['**/*.{test,spec}.{ts,tsx}', 'src/test/**', 'e2e/**', 'playwright.config.ts'],
     languageOptions: { globals: { ...globals.node } },
-    rules: { 'import-x/no-extraneous-dependencies': 'off' },
+    rules: {
+      'import-x/no-extraneous-dependencies': 'off',
+      // Tests use `const { drop: _drop, ...rest } = x` to build sparse fixtures.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^_', argsIgnorePattern: '^_' },
+      ],
+    },
   },
   prettier,
 ])

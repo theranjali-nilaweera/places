@@ -5,6 +5,10 @@
   border-radius: 6px;
 }
 
+.search-status--hint {
+  color: var(--color-text-muted);
+}
+
 .search-status--loading {
   color: var(--color-info);
   background: var(--color-info-bg);

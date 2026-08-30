@@ -5,42 +5,63 @@ import { describe, expect, it, vi } from 'vitest'
 import { SearchBar } from './SearchBar'
 
 describe('<SearchBar />', () => {
-  it('renders a labelled search input and a submit button', () => {
-    render(<SearchBar onSearch={vi.fn()} />)
+  it('renders a labelled search input and no submit button', () => {
+    render(<SearchBar onQueryChange={vi.fn()} />)
     expect(
       screen.getByRole('searchbox', { name: /place, address or landmark/i }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Go' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Go' })).not.toBeInTheDocument()
   })
 
-  it('calls onSearch with the typed value on submit', async () => {
+  it('reports the text to onQueryChange on every keystroke', async () => {
     const user = userEvent.setup()
-    const onSearch = vi.fn()
-    render(<SearchBar onSearch={onSearch} />)
+    const onQueryChange = vi.fn()
+    render(<SearchBar onQueryChange={onQueryChange} />)
 
-    await user.type(screen.getByRole('searchbox'), 'Melbourne Town Hall')
-    await user.click(screen.getByRole('button', { name: 'Go' }))
+    await user.type(screen.getByRole('searchbox'), 'Syd')
 
-    expect(onSearch).toHaveBeenCalledExactlyOnceWith('Melbourne Town Hall')
-  })
-
-  it('submits on Enter as well', async () => {
-    const user = userEvent.setup()
-    const onSearch = vi.fn()
-    render(<SearchBar onSearch={onSearch} />)
-
-    await user.type(screen.getByRole('searchbox'), 'Sydney{Enter}')
-
-    expect(onSearch).toHaveBeenCalledWith('Sydney')
+    expect(onQueryChange).toHaveBeenCalledTimes(3)
+    expect(onQueryChange).toHaveBeenLastCalledWith('Syd')
   })
 
   it('prefills from defaultValue', () => {
-    render(<SearchBar onSearch={vi.fn()} defaultValue="Perth" />)
+    render(<SearchBar onQueryChange={vi.fn()} defaultValue="Perth" />)
     expect(screen.getByRole('searchbox')).toHaveValue('Perth')
   })
 
-  it('disables the button and relabels it while pending', () => {
-    render(<SearchBar onSearch={vi.fn()} pending />)
-    expect(screen.getByRole('button', { name: '…' })).toBeDisabled()
+  it('shows the clear button only once there is text', async () => {
+    const user = userEvent.setup()
+    render(<SearchBar onQueryChange={vi.fn()} />)
+
+    expect(
+      screen.queryByRole('button', { name: /clear search/i }),
+    ).not.toBeInTheDocument()
+
+    await user.type(screen.getByRole('searchbox'), 'Perth')
+
+    expect(screen.getByRole('button', { name: /clear search/i })).toBeInTheDocument()
+  })
+
+  it('clears the input and calls onClear when the clear button is clicked', async () => {
+    const user = userEvent.setup()
+    const onClear = vi.fn()
+    render(<SearchBar onQueryChange={vi.fn()} onClear={onClear} defaultValue="Perth" />)
+
+    await user.click(screen.getByRole('button', { name: /clear search/i }))
+
+    expect(screen.getByRole('searchbox')).toHaveValue('')
+    expect(onClear).toHaveBeenCalledOnce()
+    expect(
+      screen.queryByRole('button', { name: /clear search/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('does not throw when clearing without an onClear handler', async () => {
+    const user = userEvent.setup()
+    render(<SearchBar onQueryChange={vi.fn()} defaultValue="Perth" />)
+
+    await user.click(screen.getByRole('button', { name: /clear search/i }))
+
+    expect(screen.getByRole('searchbox')).toHaveValue('')
   })
 })
