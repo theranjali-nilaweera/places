@@ -1,35 +1,39 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 
 import './SearchBar.css'
 
 /**
- * The search input. Submit-driven (Enter or the button); it hands the raw text to
- * `onSearch` and does no validation itself — `useGeocodeSearch` owns that so the
- * message shown in `SearchStatus` stays the single source of truth.
+ * The search input. Change-driven: it reports the raw text to `onQueryChange` on
+ * every keystroke and does no validation itself — `App` debounces the value and
+ * `useGeocodeSearch` owns validation, so the message shown in `SearchStatus`
+ * stays the single source of truth. There is no submit button; a short query
+ * simply doesn't trigger a request.
  */
 
 export interface SearchBarProps {
-  onSearch: (text: string) => void
+  /** Called with the raw input text on every change. */
+  onQueryChange: (text: string) => void
+  /** Clear the input and dismiss any current results. */
+  onClear?: () => void
   /** Prefill, e.g. from a `?q=` URL param (Phase 5). */
   defaultValue?: string
-  /** Disable while a request is in flight. */
-  pending?: boolean
 }
 
-export function SearchBar({
-  onSearch,
-  defaultValue = '',
-  pending = false,
-}: SearchBarProps) {
+export function SearchBar({ onQueryChange, onClear, defaultValue = '' }: SearchBarProps) {
   const [value, setValue] = useState(defaultValue)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    onSearch(value)
+  function handleChange(next: string) {
+    setValue(next)
+    onQueryChange(next)
+  }
+
+  function handleClear() {
+    setValue('')
+    onClear?.()
   }
 
   return (
-    <form className="search-bar" role="search" onSubmit={handleSubmit}>
+    <div className="search-bar" role="search">
       <div className="search-bar__row">
         <input
           className="search-bar__input"
@@ -39,12 +43,19 @@ export function SearchBar({
           aria-label="Search for a place, address or landmark"
           placeholder="Search for a place, address or landmark"
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => handleChange(event.target.value)}
         />
-        <button className="search-bar__submit" type="submit" disabled={pending}>
-          {pending ? '…' : 'Go'}
-        </button>
+        {value !== '' && (
+          <button
+            className="search-bar__clear"
+            type="button"
+            aria-label="Clear search"
+            onClick={handleClear}
+          >
+            ×
+          </button>
+        )}
       </div>
-    </form>
+    </div>
   )
 }

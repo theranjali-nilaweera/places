@@ -6,8 +6,23 @@ import type { SearchState } from '../hooks/useGeocodeSearch'
 import { SearchStatus } from './SearchStatus'
 
 describe('<SearchStatus />', () => {
-  it('renders nothing when idle', () => {
+  it('renders nothing when idle with no query typed', () => {
     const { container } = render(<SearchStatus state={{ status: 'idle' }} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('shows a "keep typing" hint for a too-short query', () => {
+    render(<SearchStatus state={{ status: 'idle' }} query="me" />)
+    expect(screen.getByRole('status')).toHaveTextContent(/keep typing/i)
+  })
+
+  it('drops the hint once the query is long enough', () => {
+    const { container } = render(<SearchStatus state={{ status: 'idle' }} query="mel" />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('ignores a whitespace-only query for the hint', () => {
+    const { container } = render(<SearchStatus state={{ status: 'idle' }} query="  " />)
     expect(container).toBeEmptyDOMElement()
   })
 

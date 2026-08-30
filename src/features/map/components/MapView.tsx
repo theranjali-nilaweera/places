@@ -1,8 +1,9 @@
 import 'leaflet/dist/leaflet.css'
 
 import { useEffect } from 'react'
-import { MapContainer, Marker, TileLayer, ZoomControl } from 'react-leaflet'
+import { MapContainer, Marker, Popup, TileLayer, ZoomControl } from 'react-leaflet'
 
+import { PlaceInfoPopup } from '@/features/place-info/components/PlaceInfoPopup'
 import type { Place } from '@/types/place'
 
 import { useMapController } from '../hooks/useMapController'
@@ -20,8 +21,8 @@ export interface MapViewProps {
 
 /**
  * Full-viewport basemap centred on Australia. When a place is selected it drops a
- * marker and recentres via {@link useMapController}. Place-info popups arrive in
- * Phase 4.
+ * marker and recentres via {@link useMapController}. The marker carries a brief
+ * {@link PlaceInfoPopup}; the fuller breakdown is in the side panel.
  */
 export function MapView({ selectedPlace = null }: MapViewProps) {
   return (
@@ -50,5 +51,11 @@ function SelectedPlaceLayer({ place }: { place: Place | null }) {
   }, [place, controller])
 
   if (!place) return null
-  return <Marker position={[place.coordinates.lat, place.coordinates.lon]} />
+  return (
+    <Marker position={[place.coordinates.lat, place.coordinates.lon]}>
+      <Popup>
+        <PlaceInfoPopup place={place} />
+      </Popup>
+    </Marker>
+  )
 }

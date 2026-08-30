@@ -37,8 +37,19 @@ vi.mock('react-leaflet', () => ({
   ZoomControl: ({ position }: { position: string }) => (
     <div data-testid="zoom-control" data-position={position} />
   ),
-  Marker: ({ position }: { position: [number, number] }) => (
-    <div data-testid="marker" data-position={JSON.stringify(position)} />
+  Marker: ({
+    position,
+    children,
+  }: {
+    position: [number, number]
+    children?: React.ReactNode
+  }) => (
+    <div data-testid="marker" data-position={JSON.stringify(position)}>
+      {children}
+    </div>
+  ),
+  Popup: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="popup">{children}</div>
   ),
   useMap: () => mapInstance,
 }))
@@ -108,6 +119,12 @@ describe('<MapView />', () => {
       ],
       { maxZoom: 16 },
     )
+  })
+
+  it('mounts a popup carrying the place-info content on the marker', () => {
+    render(<MapView selectedPlace={place} />)
+    const popup = screen.getByTestId('popup')
+    expect(popup).toContainElement(screen.getByText('Melbourne Town Hall'))
   })
 
   it('flies to a place that has no bounding box', () => {

@@ -11,8 +11,6 @@ test('searching a landmark drops a marker and recentres the map', async ({ page 
   await expect(page.locator('.leaflet-container')).toBeVisible()
 
   await page.getByRole('searchbox').fill('Sydney Opera House')
-  await page.getByRole('button', { name: 'Go' }).click()
-
   // No error surfaced.
   await expect(page.getByRole('alert')).toHaveCount(0)
 
@@ -35,8 +33,6 @@ test('a nonsense query shows a clean no-result message', async ({ page }) => {
   await page.goto('/')
 
   await page.getByRole('searchbox').fill('zzzzzz not a real place qqqqq')
-  await page.getByRole('button', { name: 'Go' }).click()
-
   await expect(page.getByRole('status')).toContainText(/no matches/i, { timeout: 20_000 })
   await expect(page.locator('.leaflet-marker-icon')).toHaveCount(0)
 })

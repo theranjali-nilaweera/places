@@ -8,8 +8,19 @@ vi.mock('react-leaflet', () => ({
   ),
   TileLayer: () => <div data-testid="tile-layer" />,
   ZoomControl: () => <div data-testid="zoom-control" />,
-  Marker: ({ position }: { position: [number, number] }) => (
-    <div data-testid="marker" data-position={JSON.stringify(position)} />
+  Marker: ({
+    position,
+    children,
+  }: {
+    position: [number, number]
+    children?: React.ReactNode
+  }) => (
+    <div data-testid="marker" data-position={JSON.stringify(position)}>
+      {children}
+    </div>
+  ),
+  Popup: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="popup">{children}</div>
   ),
   useMap: () => ({ flyTo: vi.fn(), setView: vi.fn(), fitBounds: vi.fn() }),
 }))
@@ -52,6 +63,23 @@ describe('<App />', () => {
     expect(screen.getByRole('searchbox')).toBeInTheDocument()
   })
 
+  it('does not hit the geocoding service until at least three characters are typed', async () => {
+    const user = userEvent.setup()
+    const searchFn = vi.fn().mockResolvedValue({ places: [], fellBackToGlobal: false })
+    renderApp({ search: searchFn })
+
+    await user.type(screen.getByRole('searchbox'), 'Sy')
+
+    // Well past the debounce window.
+    await new Promise((resolve) => setTimeout(resolve, 600))
+    expect(searchFn).not.toHaveBeenCalled()
+
+    await user.type(screen.getByRole('searchbox'), 'd')
+    await vi.waitFor(() =>
+      expect(searchFn).toHaveBeenCalledWith(expect.objectContaining({ text: 'Syd' })),
+    )
+  })
+
   it('does not move the map until the user picks a result', async () => {
     const user = userEvent.setup()
     renderApp({
@@ -59,7 +87,6 @@ describe('<App />', () => {
     })
 
     await user.type(screen.getByRole('searchbox'), 'Melbourne Town Hall')
-    await user.click(screen.getByRole('button', { name: 'Go' }))
 
     expect(await screen.findByText(place.displayName)).toBeInTheDocument()
     expect(screen.queryByTestId('marker')).not.toBeInTheDocument()
@@ -72,7 +99,6 @@ describe('<App />', () => {
     })
 
     await user.type(screen.getByRole('searchbox'), 'Melbourne Town Hall')
-    await user.click(screen.getByRole('button', { name: 'Go' }))
 
     await user.click(await screen.findByText(place.displayName))
 
@@ -89,7 +115,6 @@ describe('<App />', () => {
     })
 
     await user.type(screen.getByRole('searchbox'), 'nowhere at all')
-    await user.click(screen.getByRole('button', { name: 'Go' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent(/no matches/i)
   })
@@ -103,7 +128,6 @@ describe('<App />', () => {
     })
 
     await user.type(screen.getByRole('searchbox'), 'Melbourne')
-    await user.click(screen.getByRole('button', { name: 'Go' }))
 
     expect(await screen.findByText(place.displayName)).toBeInTheDocument()
     expect(screen.getByText(place2.displayName)).toBeInTheDocument()
@@ -118,7 +142,6 @@ describe('<App />', () => {
     })
 
     await user.type(screen.getByRole('searchbox'), 'Melbourne')
-    await user.click(screen.getByRole('button', { name: 'Go' }))
 
     await user.click(await screen.findByText(place2.displayName))
 
@@ -126,7 +149,9 @@ describe('<App />', () => {
       'data-position',
       JSON.stringify([place2.coordinates.lat, place2.coordinates.lon]),
     )
-    expect(screen.getByText(place2.displayName)).toBeInTheDocument()
+    // The list stays open (its item plus the new place-info panel both show it).
+    expect(screen.getAllByText(place2.displayName).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /Close results/i })).toBeInTheDocument()
   })
 
   it('hides the results panel when the close button is clicked', async () => {
@@ -136,7 +161,6 @@ describe('<App />', () => {
     })
 
     await user.type(screen.getByRole('searchbox'), 'Melbourne')
-    await user.click(screen.getByRole('button', { name: 'Go' }))
 
     expect(await screen.findByText(place.displayName)).toBeInTheDocument()
 
@@ -156,7 +180,6 @@ describe('<App />', () => {
     })
 
     await user.type(screen.getByRole('searchbox'), 'Melbourne')
-    await user.click(screen.getByRole('button', { name: 'Go' }))
     expect(await screen.findByText(place.displayName)).toBeInTheDocument()
 
     const closeButton = screen.getByRole('button', { name: /Close results/i })
@@ -166,7 +189,6 @@ describe('<App />', () => {
     searchFn.mockResolvedValue({ places: [place2], fellBackToGlobal: false })
     await user.clear(screen.getByRole('searchbox'))
     await user.type(screen.getByRole('searchbox'), 'Flinders')
-    await user.click(screen.getByRole('button', { name: 'Go' }))
 
     expect(await screen.findByText(place2.displayName)).toBeInTheDocument()
   })
