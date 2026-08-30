@@ -26,7 +26,7 @@ export function createDefaultGeocodingService(): GeocodingService {
     // Browsers drop User-Agent; it identifies us when the client runs under Node.
     // Referer is set automatically by the browser.
     headers: {
-      'User-Agent': 'pozi-map-challenge (github.com/theranjali-nilaweera/pozi)',
+      'User-Agent': 'tj-map (github.com/theranjali-nilaweera/places)',
       Accept: 'application/json',
     },
   })
