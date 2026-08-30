@@ -29,6 +29,7 @@ export function PlaceInfoPanel({ place, onClose }: PlaceInfoPanelProps) {
 
   return (
     <section className="place-info" aria-label={`Details for ${place.name}`}>
+      <p className="place-info__eyebrow">Details</p>
       <header className="place-info__header">
         <h2 className="place-info__name">{place.name}</h2>
         <button
