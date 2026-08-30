@@ -17,6 +17,12 @@ ensureDefaultMarkerIcon()
 export interface MapViewProps {
   /** The current search result to mark and frame. `null` = nothing selected. */
   selectedPlace?: Place | null
+  /**
+   * Initial view from a `?lat=&lon=&z=` URL, applied at mount only. Falls back to
+   * the configured Australia view when absent. Not reactive — the URL does not
+   * track pan/zoom.
+   */
+  initialView?: { lat: number; lon: number; zoom: number } | null
 }
 
 /**
@@ -24,14 +30,14 @@ export interface MapViewProps {
  * marker and recentres via {@link useMapController}. The marker carries a brief
  * {@link PlaceInfoPopup}; the fuller breakdown is in the side panel.
  */
-export function MapView({ selectedPlace = null }: MapViewProps) {
+export function MapView({ selectedPlace = null, initialView = null }: MapViewProps) {
+  const center: [number, number] = initialView
+    ? [initialView.lat, initialView.lon]
+    : [mapConfig.center.lat, mapConfig.center.lon]
+  const zoom = initialView ? initialView.zoom : mapConfig.zoom
+
   return (
-    <MapContainer
-      className="map-view"
-      center={[mapConfig.center.lat, mapConfig.center.lon]}
-      zoom={mapConfig.zoom}
-      zoomControl={false}
-    >
+    <MapContainer className="map-view" center={center} zoom={zoom} zoomControl={false}>
       <TileLayer
         url={mapConfig.tileLayer.url}
         attribution={mapConfig.tileLayer.attribution}
