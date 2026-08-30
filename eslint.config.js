@@ -68,7 +68,7 @@ export default tseslint.config([
   },
   logicLayerBoundary,
   {
-    files: ['**/*.{test,spec}.{ts,tsx}', 'src/test/**', 'e2e/**'],
+    files: ['**/*.{test,spec}.{ts,tsx}', 'src/test/**', 'e2e/**', 'playwright.config.ts'],
     languageOptions: { globals: { ...globals.node } },
     rules: { 'import-x/no-extraneous-dependencies': 'off' },
   },
