@@ -33,7 +33,7 @@ describe('HttpClient.getJson', () => {
     const fetchFn = vi.fn().mockResolvedValue(jsonResponse([{ ok: true }]))
     const client = new HttpClient({
       baseUrl: 'https://example.test',
-      headers: { 'User-Agent': 'pozi-test' },
+      headers: { 'User-Agent': 'tj-test' },
       fetchFn,
     })
 
@@ -41,7 +41,7 @@ describe('HttpClient.getJson', () => {
 
     expect(body).toEqual([{ ok: true }])
     const [, init] = fetchFn.mock.calls[0]!
-    expect(init.headers).toEqual({ 'User-Agent': 'pozi-test' })
+    expect(init.headers).toEqual({ 'User-Agent': 'tj-test' })
   })
 
   it.each([

@@ -1,6 +1,6 @@
 # Places
 
-A small Web GIS app built for the Pozi coding challenge: search for a place, address, or
+A small Web GIS app built: search for a place, address, or
 landmark, see it on a map, read useful information about it, and share or reopen any view
 through the URL.
 
@@ -163,6 +163,7 @@ git commit --no-verify
 - **Collapsible / full-screen panels on small screens.** The layout is relatively responsive, but there's a lot that can be done to avoid hindering the map view when a result is selected.
   For example the search, results, and detail panels should collapse when not needed and expand to
   full screen with a dismiss control on narrow viewports.
+  The details view section needs to have a better separation UI. Ideally a navigation view in the search result view. This preserves the search results and allows to see the details of wha you clicked on as well. The multiple close buttons can be avoided by this.
 - **Results list accessibility.** Add `listbox`/`option` semantics, keyboard navigation
   (arrow keys + Enter), and focus management when a result is chosen.
 - **Type-ahead suggestions** as the user types, within the same rate-limit budget.
@@ -171,7 +172,7 @@ git commit --no-verify
 
 ## Deployment
 
-Live: <https://places-5rkfusps3-tj-e2c2.vercel.app>
+Live: <https://places-black.vercel.app?_vercel_share=LN2Dg0oO6fkrYUWorpxxahBrIHDUiVPX>
 
 `npm run build` produces a static bundle in `dist/` that can be served from any static
 host.
