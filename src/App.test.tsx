@@ -1,10 +1,24 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('react-leaflet', () => ({
-  MapContainer: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="map-container">{children}</div>
+  MapContainer: ({
+    children,
+    center,
+    zoom,
+  }: {
+    children?: React.ReactNode
+    center?: [number, number]
+    zoom?: number
+  }) => (
+    <div
+      data-testid="map-container"
+      data-center={JSON.stringify(center)}
+      data-zoom={zoom}
+    >
+      {children}
+    </div>
   ),
   TileLayer: () => <div data-testid="tile-layer" />,
   ZoomControl: () => <div data-testid="zoom-control" />,
@@ -53,6 +67,10 @@ function renderApp(service: GeocodingService) {
     </AppProviders>,
   )
 }
+
+afterEach(() => {
+  window.history.replaceState(null, '', '/')
+})
 
 describe('<App />', () => {
   it('renders the map and the search box without crashing', () => {
@@ -168,6 +186,52 @@ describe('<App />', () => {
     await user.click(closeButton)
 
     expect(screen.queryByText(place.displayName)).not.toBeInTheDocument()
+  })
+
+  describe('URL as an input channel', () => {
+    it('runs the search from ?search= on load without moving the map', async () => {
+      window.history.replaceState(null, '', '/?search=Melbourne')
+      const searchFn = vi
+        .fn()
+        .mockResolvedValue({ places: [place], fellBackToGlobal: false })
+      renderApp({ search: searchFn })
+
+      await vi.waitFor(() =>
+        expect(searchFn).toHaveBeenCalledWith(
+          expect.objectContaining({ text: 'Melbourne' }),
+        ),
+      )
+      expect(await screen.findByText(place.displayName)).toBeInTheDocument()
+      expect(screen.queryByTestId('marker')).not.toBeInTheDocument()
+      expect(window.location.search).toBe('?search=Melbourne')
+    })
+
+    it('opens the map at ?lat=&lon=&z= and runs no search', async () => {
+      window.history.replaceState(null, '', '/?lat=-37.8136&lon=144.9631&z=15')
+      const searchFn = vi.fn().mockResolvedValue({ places: [], fellBackToGlobal: false })
+      renderApp({ search: searchFn })
+
+      const container = screen.getByTestId('map-container')
+      expect(container.dataset.center).toBe(JSON.stringify([-37.8136, 144.9631]))
+      expect(container.dataset.zoom).toBe('15')
+
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      expect(searchFn).not.toHaveBeenCalled()
+      expect(window.location.search).toBe('?search=')
+    })
+
+    it('clears the stale ?search= value on the first edit of the box', async () => {
+      window.history.replaceState(null, '', '/?search=Melbourne')
+      const user = userEvent.setup()
+      renderApp({
+        search: vi.fn().mockResolvedValue({ places: [place], fellBackToGlobal: false }),
+      })
+
+      expect(await screen.findByText(place.displayName)).toBeInTheDocument()
+
+      await user.type(screen.getByRole('searchbox'), 'x')
+      expect(window.location.search).toBe('?search=')
+    })
   })
 
   it('reopens the results panel when a new search is performed after closing', async () => {

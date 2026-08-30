@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { Place } from '@/types/place'
 
@@ -11,17 +11,27 @@ import { SearchStatus } from './features/search/components/SearchStatus'
 import { useDebouncedValue } from './features/search/hooks/useDebouncedValue'
 import { useGeocodeSearch } from './features/search/hooks/useGeocodeSearch'
 import { MIN_QUERY_LENGTH } from './features/search/validators/searchInput.schema'
+import {
+  clearSearchParam,
+  useInitialUrlState,
+} from './features/url-sync/hooks/useInitialUrlState'
 
 import './App.css'
 
 /**
  * Composition root: a search box over the map. Search results are listed in a
  * dismissible panel; selecting a result frames it on the map (without closing the
- * list) and opens the place-info panel below it. URL-sync layers on in Phase 5.
+ * list) and opens the place-info panel below it.
+ *
+ * The URL is a read-on-load input channel: `?search=` prefills the box and runs a
+ * search; `?lat=&lon=&z=` sets the initial map view. On the user's first edit the
+ * loaded `?search=` value is stale, so we collapse it back to the bare affordance.
  */
 function App() {
   const geocoding = useGeocodingService()
   const { state, search, reset } = useGeocodeSearch(geocoding)
+
+  const initialUrlState = useInitialUrlState()
 
   // The map only moves when the user explicitly picks a result from the list;
   // running a search populates the list but leaves the current view untouched.
@@ -29,8 +39,13 @@ function App() {
 
   // Hold off the geocode call until the user stops typing; the RateLimiter in the
   // geocoding service then spaces the actual requests to Nominatim's 1 req/s cap.
-  const [query, setQuery] = useState('')
+  // Seeded from `?search=` so a deep link runs its search on mount.
+  const [query, setQuery] = useState(initialUrlState.search ?? '')
   const debouncedQuery = useDebouncedValue(query)
+
+  // True while the address bar still shows the value we loaded from `?search=`.
+  // The first user edit invalidates it; we clear the param once and stop tracking.
+  const urlSearchLive = useRef(initialUrlState.search !== undefined)
 
   // The results panel is derived, not stateful: it shows whenever there is a
   // successful search the user hasn't dismissed. Closing it records the query
@@ -47,9 +62,16 @@ function App() {
     search(debouncedQuery)
   }, [debouncedQuery, search, reset])
 
+  function dropStaleUrlSearch() {
+    if (!urlSearchLive.current) return
+    clearSearchParam()
+    urlSearchLive.current = false
+  }
+
   function handleQueryChange(text: string) {
     setQuery(text)
     setDismissedQuery(null)
+    dropStaleUrlSearch()
   }
 
   function handleClear() {
@@ -57,12 +79,17 @@ function App() {
     setDismissedQuery(null)
     reset()
     setSelectedPlace(null)
+    dropStaleUrlSearch()
   }
 
   return (
     <div className="app">
       <div className="app__panel">
-        <SearchBar onQueryChange={handleQueryChange} onClear={handleClear} />
+        <SearchBar
+          onQueryChange={handleQueryChange}
+          onClear={handleClear}
+          defaultValue={initialUrlState.search ?? ''}
+        />
         <SearchStatus state={state} query={query} />
         {resultsOpen && state.status === 'success' && state.places.length > 0 && (
           <SearchResults
@@ -74,7 +101,7 @@ function App() {
         )}
         <PlaceInfoPanel place={selectedPlace} onClose={() => setSelectedPlace(null)} />
       </div>
-      <MapView selectedPlace={selectedPlace} />
+      <MapView selectedPlace={selectedPlace} initialView={initialUrlState.view} />
     </div>
   )
 }

@@ -87,6 +87,13 @@ describe('<MapView />', () => {
     expect(container.dataset.zoom).toBe(String(mapConfig.zoom))
   })
 
+  it('uses an explicit initialView for the mount view when provided', () => {
+    render(<MapView initialView={{ lat: -37.81, lon: 144.96, zoom: 15 }} />)
+    const container = screen.getByTestId('map-container')
+    expect(container.dataset.center).toBe(JSON.stringify([-37.81, 144.96]))
+    expect(container.dataset.zoom).toBe('15')
+  })
+
   it('mounts the tile layer with the configured URL and attribution', () => {
     render(<MapView />)
     const tileLayer = screen.getByTestId('tile-layer')
