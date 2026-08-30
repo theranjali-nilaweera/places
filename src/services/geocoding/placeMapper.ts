@@ -48,8 +48,10 @@ function toName(result: NominatimResult): string {
   return first?.trim() || result.display_name
 }
 
-export function mapNominatimResult(result: NominatimResult): Place {
-  const place = {
+/** Assemble the domain shape without validating — the two entry points below decide
+ *  whether a bad shape should throw or be dropped. */
+function buildPlace(result: NominatimResult): unknown {
+  return {
     id: toId(result),
     name: toName(result),
     displayName: result.display_name,
@@ -60,10 +62,33 @@ export function mapNominatimResult(result: NominatimResult): Place {
     address: result.address,
     links: toLinks(result.extratags),
   }
-  // Re-validate so a mapping bug surfaces here, not deep in the UI.
-  return placeSchema.parse(place)
 }
 
+/**
+ * Map a single result, throwing on an invalid shape. Use this when the caller
+ * controls the input and a failure means a mapping bug worth surfacing loudly.
+ */
+export function mapNominatimResult(result: NominatimResult): Place {
+  // Re-validate so a mapping bug surfaces here, not deep in the UI.
+  return placeSchema.parse(buildPlace(result))
+}
+
+/**
+ * Map a whole Nominatim response, tolerating rows the provider sends that don't
+ * satisfy our contract (out-of-range coord, non-string address value, …). Bad
+ * rows are dropped and logged so one odd result can't sink the other good ones.
+ */
 export function mapNominatimResults(results: NominatimResult[]): Place[] {
-  return results.map(mapNominatimResult)
+  const places: Place[] = []
+  for (const result of results) {
+    const parsed = placeSchema.safeParse(buildPlace(result))
+    if (parsed.success) places.push(parsed.data)
+  }
+  const dropped = results.length - places.length
+  if (dropped > 0) {
+    console.warn(
+      `[geocoding] dropped ${dropped} of ${results.length} Nominatim results that failed validation`,
+    )
+  }
+  return places
 }

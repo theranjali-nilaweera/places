@@ -19,6 +19,8 @@ export const NOMINATIM_MIN_INTERVAL_MS = 1000
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
+const abortError = () => new DOMException('Aborted', 'AbortError')
+
 export class RateLimiter {
   private readonly minIntervalMs: number
   private readonly now: () => number
@@ -33,11 +35,20 @@ export class RateLimiter {
     this.sleep = options.sleep ?? defaultSleep
   }
 
-  /** Run `task` once enough time has passed since the previous scheduled task. */
-  schedule<T>(task: () => Promise<T>): Promise<T> {
+  /**
+   * Run `task` once enough time has passed since the previous scheduled task.
+   * If `signal` aborts while the task waits its turn, it rejects with an
+   * `AbortError` without running or consuming a slot — so a superseded search
+   * never delays the one that replaced it.
+   */
+  schedule<T>(task: () => Promise<T>, signal?: AbortSignal): Promise<T> {
     const run = this.queue.then(async () => {
+      if (signal?.aborted) throw abortError()
       const wait = this.lastStart + this.minIntervalMs - this.now()
       if (wait > 0) await this.sleep(wait)
+      // Re-check after the wait: a task aborted while queued must not touch
+      // lastStart, or the task behind it waits a full interval for nothing.
+      if (signal?.aborted) throw abortError()
       this.lastStart = this.now()
       return task()
     })

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { forwardRef, useImperativeHandle } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Place } from '@/types/place'
@@ -6,6 +7,7 @@ import type { Place } from '@/types/place'
 import { mapConfig } from '../map.config'
 
 const mapInstance = { flyTo: vi.fn(), setView: vi.fn(), fitBounds: vi.fn() }
+const markerInstance = { openPopup: vi.fn() }
 
 vi.mock('react-leaflet', () => ({
   MapContainer: ({
@@ -37,16 +39,18 @@ vi.mock('react-leaflet', () => ({
   ZoomControl: ({ position }: { position: string }) => (
     <div data-testid="zoom-control" data-position={position} />
   ),
-  Marker: ({
-    position,
-    children,
-  }: {
-    position: [number, number]
-    children?: React.ReactNode
-  }) => (
-    <div data-testid="marker" data-position={JSON.stringify(position)}>
-      {children}
-    </div>
+  Marker: forwardRef(
+    (
+      { position, children }: { position: [number, number]; children?: React.ReactNode },
+      ref: React.Ref<typeof markerInstance>,
+    ) => {
+      useImperativeHandle(ref, () => markerInstance)
+      return (
+        <div data-testid="marker" data-position={JSON.stringify(position)}>
+          {children}
+        </div>
+      )
+    },
   ),
   Popup: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="popup">{children}</div>
@@ -69,6 +73,7 @@ describe('<MapView />', () => {
   beforeEach(() => {
     mapInstance.flyTo.mockClear()
     mapInstance.fitBounds.mockClear()
+    markerInstance.openPopup.mockClear()
   })
 
   it('renders a full-viewport map container', () => {
