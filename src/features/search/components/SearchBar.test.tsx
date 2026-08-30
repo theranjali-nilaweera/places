@@ -7,9 +7,7 @@ import { SearchBar } from './SearchBar'
 describe('<SearchBar />', () => {
   it('renders a labelled search input and no submit button', () => {
     render(<SearchBar onQueryChange={vi.fn()} />)
-    expect(
-      screen.getByRole('searchbox', { name: /place, address or landmark/i }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('searchbox', { name: /Search the map/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Go' })).not.toBeInTheDocument()
   })
 

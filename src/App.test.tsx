@@ -189,11 +189,11 @@ describe('<App />', () => {
   })
 
   describe('URL as an input channel', () => {
-    it('runs the search from ?search= on load without moving the map', async () => {
+    it('runs the search from ?search= on load and auto-selects the first result', async () => {
       window.history.replaceState(null, '', '/?search=Melbourne')
       const searchFn = vi
         .fn()
-        .mockResolvedValue({ places: [place], fellBackToGlobal: false })
+        .mockResolvedValue({ places: [place, place2], fellBackToGlobal: false })
       renderApp({ search: searchFn })
 
       await vi.waitFor(() =>
@@ -201,9 +201,45 @@ describe('<App />', () => {
           expect.objectContaining({ text: 'Melbourne' }),
         ),
       )
-      expect(await screen.findByText(place.displayName)).toBeInTheDocument()
-      expect(screen.queryByTestId('marker')).not.toBeInTheDocument()
+      // First result is framed on the map; the results list stays open.
+      expect(await screen.findByTestId('marker')).toHaveAttribute(
+        'data-position',
+        JSON.stringify([place.coordinates.lat, place.coordinates.lon]),
+      )
+      expect(screen.getByRole('button', { name: /Close results/i })).toBeInTheDocument()
       expect(window.location.search).toBe('?search=Melbourne')
+    })
+
+    it('auto-selects nothing when the ?search= search returns no results', async () => {
+      window.history.replaceState(null, '', '/?search=nowhere')
+      renderApp({
+        search: vi.fn().mockResolvedValue({ places: [], fellBackToGlobal: false }),
+      })
+
+      expect(await screen.findByRole('status')).toHaveTextContent(/no matches/i)
+      expect(screen.queryByTestId('marker')).not.toBeInTheDocument()
+    })
+
+    it('does not auto-select if the user edits the box before the ?search= search resolves', async () => {
+      window.history.replaceState(null, '', '/?search=Melbourne')
+      const user = userEvent.setup()
+      let resolveSearch: (value: {
+        places: Place[]
+        fellBackToGlobal: boolean
+      }) => void = () => {}
+      const searchFn = vi.fn().mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveSearch = resolve
+          }),
+      )
+      renderApp({ search: searchFn })
+
+      await user.type(screen.getByRole('searchbox'), 'x')
+      resolveSearch({ places: [place], fellBackToGlobal: false })
+
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      expect(screen.queryByTestId('marker')).not.toBeInTheDocument()
     })
 
     it('opens the map at ?lat=&lon=&z= and runs no search', async () => {
@@ -227,7 +263,8 @@ describe('<App />', () => {
         search: vi.fn().mockResolvedValue({ places: [place], fellBackToGlobal: false }),
       })
 
-      expect(await screen.findByText(place.displayName)).toBeInTheDocument()
+      // Wait for the URL-seeded search to resolve (its result gets auto-selected).
+      expect(await screen.findByTestId('marker')).toBeInTheDocument()
 
       await user.type(screen.getByRole('searchbox'), 'x')
       expect(window.location.search).toBe('?search=')

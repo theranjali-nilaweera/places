@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { NominatimResult } from '../api/nominatim/nominatimResponse.schema'
 
@@ -97,6 +97,10 @@ describe('mapNominatimResult', () => {
 })
 
 describe('mapNominatimResults', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('maps an array in order', () => {
     const out = mapNominatimResults([full, { ...full, osm_id: 43 }])
     expect(out.map((p) => p.id)).toEqual(['way/42', 'way/43'])
@@ -104,5 +108,41 @@ describe('mapNominatimResults', () => {
 
   it('returns [] for []', () => {
     expect(mapNominatimResults([])).toEqual([])
+  })
+
+  it('drops a row with an out-of-range coordinate and keeps the good ones', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bad = { ...full, osm_id: 99, lat: '999' } as NominatimResult
+    const out = mapNominatimResults([full, bad, { ...full, osm_id: 43 }])
+    expect(out.map((p) => p.id)).toEqual(['way/42', 'way/43'])
+    expect(warn).toHaveBeenCalledWith(
+      '[geocoding] dropped 1 of 3 Nominatim results that failed validation',
+    )
+  })
+
+  it('drops a row whose address holds a non-string value', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bad = {
+      ...full,
+      osm_id: 99,
+      address: { city: 'Melbourne', postcode: 3000 },
+    } as unknown as NominatimResult
+    const out = mapNominatimResults([bad, full])
+    expect(out.map((p) => p.id)).toEqual(['way/42'])
+  })
+
+  it('returns [] and warns when every row is invalid', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bad = { ...full, lat: 'not-a-number' } as NominatimResult
+    expect(mapNominatimResults([bad, { ...bad, osm_id: 2 }])).toEqual([])
+    expect(warn).toHaveBeenCalledWith(
+      '[geocoding] dropped 2 of 2 Nominatim results that failed validation',
+    )
+  })
+
+  it('does not warn when every row is valid', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mapNominatimResults([full])
+    expect(warn).not.toHaveBeenCalled()
   })
 })

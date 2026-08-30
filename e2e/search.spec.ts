@@ -5,8 +5,13 @@ import { expect, test } from '@playwright/test'
  * unambiguous landmark and asserts on stable outcomes (a marker exists and sits
  * inside the map viewport) rather than exact coordinates, which drift with the
  * upstream data.
+ *
+ * A typed search only populates the results list; the map recentres and a marker
+ * drops once the user picks a result.
  */
-test('searching a landmark drops a marker and recentres the map', async ({ page }) => {
+test('selecting a landmark result drops a marker and recentres the map', async ({
+  page,
+}) => {
   await page.goto('/')
   await expect(page.locator('.leaflet-container')).toBeVisible()
 
@@ -14,7 +19,12 @@ test('searching a landmark drops a marker and recentres the map', async ({ page 
   // No error surfaced.
   await expect(page.getByRole('alert')).toHaveCount(0)
 
-  // A marker appears once the geocode resolves.
+  // The results list appears once the geocode resolves; pick the first hit.
+  const firstResult = page.locator('.search-results__item').first()
+  await expect(firstResult).toBeVisible({ timeout: 20_000 })
+  await firstResult.click()
+
+  // A marker appears for the selected place.
   const marker = page.locator('.leaflet-marker-icon').first()
   await expect(marker).toBeVisible({ timeout: 20_000 })
 

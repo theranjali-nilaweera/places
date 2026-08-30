@@ -82,6 +82,43 @@ describe('RateLimiter', () => {
     expect(clock.waits).toEqual([1000])
   })
 
+  it('rejects a task whose signal is already aborted, without running it', async () => {
+    const clock = fakeClock()
+    const limiter = new RateLimiter({ minIntervalMs: 1000, ...clock })
+    const controller = new AbortController()
+    controller.abort()
+
+    const task = vi.fn(() => Promise.resolve('x'))
+    await expect(limiter.schedule(task, controller.signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    })
+    expect(task).not.toHaveBeenCalled()
+  })
+
+  it('does not consume a slot for a task aborted while it waited its turn', async () => {
+    const clock = fakeClock()
+    const limiter = new RateLimiter({ minIntervalMs: 1000, ...clock })
+
+    const superseded = new AbortController()
+    const first = vi.fn(async () => 'first')
+    const stale = vi.fn(async () => 'stale')
+    const final = vi.fn(async () => 'final')
+
+    const p1 = limiter.schedule(first)
+    const p2 = limiter.schedule(stale, superseded.signal)
+    const p3 = limiter.schedule(final)
+
+    // The user moved on before the stale task's turn came up.
+    superseded.abort()
+
+    await Promise.allSettled([p1, p2, p3])
+
+    expect(stale).not.toHaveBeenCalled()
+    expect(final).toHaveBeenCalledOnce()
+    // Only `first` and `final` are real requests: one wait between them, not two.
+    expect(clock.waits).toEqual([1000])
+  })
+
   it('propagates the task result', async () => {
     const limiter = new RateLimiter({ ...fakeClock() })
     await expect(limiter.schedule(() => Promise.resolve(42))).resolves.toBe(42)

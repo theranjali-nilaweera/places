@@ -51,13 +51,15 @@ export class NominatimGeocodingService implements GeocodingService {
   async search(query: GeocodeQuery): Promise<GeocodeResult> {
     const text = queryTextSchema.parse(query.text)
 
-    const results = await this.limiter.schedule(() =>
-      this.client.search({
-        query: text,
-        countryCodes: this.countryCodes,
-        limit: this.limit,
-        signal: query.signal,
-      }),
+    const results = await this.limiter.schedule(
+      () =>
+        this.client.search({
+          query: text,
+          countryCodes: this.countryCodes,
+          limit: this.limit,
+          signal: query.signal,
+        }),
+      query.signal,
     )
 
     return {
