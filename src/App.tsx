@@ -26,6 +26,9 @@ import './App.css'
  * The URL is a read-on-load input channel: `?search=` prefills the box and runs a
  * search; `?lat=&lon=&z=` sets the initial map view. On the user's first edit the
  * loaded `?search=` value is stale, so we collapse it back to the bare affordance.
+ * A search that came from `?search=` also auto-selects its first result so the
+ * deep link lands on a place; a search the user types never moves the map on its
+ * own.
  */
 function App() {
   const geocoding = useGeocodingService()
@@ -47,6 +50,13 @@ function App() {
   // The first user edit invalidates it; we clear the param once and stop tracking.
   const urlSearchLive = useRef(initialUrlState.search !== undefined)
 
+  // One-shot latch: the `?search=` search auto-selects its first result. Flips to
+  // consumed the moment that search resolves (any outcome) or the user touches
+  // the box, so later UI searches never move the map on their own.
+  const [urlSearchConsumed, setUrlSearchConsumed] = useState(
+    initialUrlState.search === undefined,
+  )
+
   // The results panel is derived, not stateful: it shows whenever there is a
   // successful search the user hasn't dismissed. Closing it records the query
   // that was dismissed; typing anything clears that, so the next search reopens.
@@ -62,7 +72,18 @@ function App() {
     search(debouncedQuery)
   }, [debouncedQuery, search, reset])
 
+  // Auto-select the first result of the `?search=` deep-link search — once.
+  // Done while rendering (React's "adjust state on data change" pattern), not in
+  // an effect, so there is no extra commit. `idle`/`loading` mean the search
+  // hasn't resolved yet; any terminal state consumes the latch.
+  if (!urlSearchConsumed && state.status !== 'idle' && state.status !== 'loading') {
+    setUrlSearchConsumed(true)
+    const [firstResult] = state.status === 'success' ? state.places : []
+    if (firstResult) setSelectedPlace(firstResult)
+  }
+
   function dropStaleUrlSearch() {
+    setUrlSearchConsumed(true)
     if (!urlSearchLive.current) return
     clearSearchParam()
     urlSearchLive.current = false
