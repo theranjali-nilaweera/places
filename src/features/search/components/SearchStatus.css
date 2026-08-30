@@ -1,0 +1,21 @@
+.search-status {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.88rem;
+  border-radius: 6px;
+}
+
+.search-status--loading {
+  color: var(--color-info);
+  background: var(--color-info-bg);
+}
+
+.search-status--empty {
+  color: var(--color-warn);
+  background: var(--color-warn-bg);
+}
+
+.search-status--error {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+}
