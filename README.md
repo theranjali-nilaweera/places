@@ -182,3 +182,11 @@ host.
 - Map data & geocoding © [OpenStreetMap](https://www.openstreetmap.org/copyright)
   contributors, via the [Nominatim](https://nominatim.org/) API.
 - Map rendering by [Leaflet](https://leafletjs.com/).
+
+
+## Screenshots
+<img width="1447" height="874" alt="image" src="https://github.com/user-attachments/assets/7c942768-f8e7-4502-aaef-79d00e443026" />
+
+<img width="1004" height="859" alt="image" src="https://github.com/user-attachments/assets/b08fcd40-ee6f-487a-b97c-41b24e90cead" />
+
+
