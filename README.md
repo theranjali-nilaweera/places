@@ -11,7 +11,7 @@ through the URL.
 - **Australia-first results.** Queries are biased to Australia by default
   (`src/config/app.config.ts` → `defaultCountryCodes`); change that one array to
   re-target or go global.
-- **Results list.** Matches appear in a dismissible panel; selecting one frames it on
+- **Results list.** Matches appear in a dismissible panel; selecting one, frames it on
   the map without closing the list.
 - **Place-info panel.** For the selected place: name, classification, a formatted
   address, and any available links — website, phone (`tel:`), opening hours, Wikidata.
@@ -67,6 +67,7 @@ Rules:
   loads.
 - With no usable parameter the address bar is normalised to `?search=` so the channel
   stays discoverable.
+- If less characters than what API triggering expects in `search` param, it will show "keep typing" prompt
 
 ## Project layout
 
@@ -152,6 +153,12 @@ git commit --no-verify
 - **E2E hits live services.** Playwright specs use no request interception; they need
   network access and can be slow or flaky when Nominatim is under load.
 - **Single locale.** English UI, no internationalisation.
+- `search` takes precedence — if it is usable, `lat` / `lon` / `z` are ignored.
+- Malformed, out-of-range, or partial parameters are dropped silently; the app still
+  loads.
+- With no usable parameter the address bar is normalised to `?search=` so the channel
+  stays discoverable.
+- If less characters than what API triggering expects in `search` param, it will show "keep typing" prompt.
 
 ## TODO
 
@@ -163,7 +170,7 @@ git commit --no-verify
 - **Collapsible / full-screen panels on small screens.** The layout is relatively responsive, but there's a lot that can be done to avoid hindering the map view when a result is selected.
   For example the search, results, and detail panels should collapse when not needed and expand to
   full screen with a dismiss control on narrow viewports.
-  The details view section needs to have a better separation UI. Ideally a navigation view in the search result view. This preserves the search results and allows to see the details of wha you clicked on as well. The multiple close buttons can be avoided by this.
+  The details view section needs to have a better separation UI. Ideally a navigation view in the search result view. This preserves the search results and allows to see the details of what you clicked on as well. The multiple close buttons can be avoided by this.
 - **Results list accessibility.** Add `listbox`/`option` semantics, keyboard navigation
   (arrow keys + Enter), and focus management when a result is chosen.
 - **Type-ahead suggestions** as the user types, within the same rate-limit budget.
@@ -172,7 +179,7 @@ git commit --no-verify
 
 ## Deployment
 
-Live: <https://places-black.vercel.app?_vercel_share=LN2Dg0oO6fkrYUWorpxxahBrIHDUiVPX>
+[Live](<https://places-black.vercel.app?_vercel_share=LN2Dg0oO6fkrYUWorpxxahBrIHDUiVPX>)
 
 `npm run build` produces a static bundle in `dist/` that can be served from any static
 host.
@@ -187,6 +194,7 @@ host.
 ## Screenshots
 <img width="1447" height="874" alt="image" src="https://github.com/user-attachments/assets/7c942768-f8e7-4502-aaef-79d00e443026" />
 
-<img width="1004" height="859" alt="image" src="https://github.com/user-attachments/assets/b08fcd40-ee6f-487a-b97c-41b24e90cead" />
+<img width="997" height="827" alt="image" src="https://github.com/user-attachments/assets/106f674b-1950-4ab4-9bab-5ae7cf956382" />
+
 
 
